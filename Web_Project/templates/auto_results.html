@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - AlgoLab</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .metric-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #0d6efd;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-good {
+            border-left-color: #198754;
+        }
+
+        .metric-warning {
+            border-left-color: #ffc107;
+        }
+
+        .metric-bad {
+            border-left-color: #dc3545;
+        }
+
+        .algorithm-tab {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .algorithm-tab:hover {
+            background-color: #f8f9fa;
+        }
+
+        .algorithm-tab.active {
+            background-color: #e7f1ff;
+            border-left: 4px solid #0d6efd;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> AlgoLab
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('upload') }}">Upload New Data</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('compare') }}">Compare</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+            role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-chart-bar text-primary me-2"></i>
+                    Automatic Analysis Results
+                </h1>
+                <p class="lead text-muted">
+                    Comprehensive analysis of your dataset with {{ all_results|length }} algorithm{{ 's' if
+                    all_results|length != 1 else '' }} automatically applied
+                </p>
+            </div>
+        </div>
+
+        <!-- Data Overview -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-database me-2"></i>Dataset Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="metric-card card text-center p-3 mb-3">
+                            <i class="fas fa-table fa-2x text-primary mb-2"></i>
+                            <h3 class="mb-0">{{ insights.shape[0] }}</h3>
+                            <small class="text-muted">Rows</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card card text-center p-3 mb-3">
+                            <i class="fas fa-columns fa-2x text-success mb-2"></i>
+                            <h3 class="mb-0">{{ insights.shape[1] }}</h3>
+                            <small class="text-muted">Columns</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div
+                            class="metric-card card text-center p-3 mb-3 {{ 'metric-good' if insights.missing_summary.missing_percentage < 5 else 'metric-warning' if insights.missing_summary.missing_percentage < 20 else 'metric-bad' }}">
+                            <i
+                                class="fas fa-exclamation-triangle fa-2x {{ 'text-success' if insights.missing_summary.missing_percentage < 5 else 'text-warning' if insights.missing_summary.missing_percentage < 20 else 'text-danger' }} mb-2"></i>
+                            <h3 class="mb-0">{{ "%.1f"|format(insights.missing_summary.missing_percentage) }}%</h3>
+                            <small class="text-muted">Missing Data</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card card text-center p-3 mb-3">
+                            <i class="fas fa-memory fa-2x text-warning mb-2"></i>
+                            <h3 class="mb-0">{{ insights.memory_usage }}</h3>
+                            <small class="text-muted">Memory</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Numeric Columns:</strong> {{ insights.numeric_columns|length }}</p>
+                        <small class="text-muted">{{ insights.numeric_columns|join(', ') }}</small>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Problem Type Detected:</strong>
+                            <span class="badge bg-primary">{{ insights.problem_type|upper }}</span>
+                        </p>
+                        {% if insights.auto_target %}
+                        <p class="mb-0"><strong>Auto-Selected Target:</strong> <code>{{ insights.auto_target }}</code>
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Preview -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="fas fa-eye me-2"></i>Data Preview (First 5 Rows)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                {% for col in preview.columns %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview.head %}
+                            <tr>
+                                {% for col in preview.columns %}
+                                <td>{{ row[col] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Visualizations -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Data Visualizations</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for viz_name, viz_data in data_viz.items() %}
+                    <div class="col-12">
+                        <h6 class="text-capitalize">{{ viz_name|replace('_', ' ') }}</h6>
+                        <img src="{{ viz_data }}" class="img-fluid rounded shadow-sm" alt="{{ viz_name }}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Algorithm Results Comparison -->
+        {% if all_results %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Algorithm Performance Comparison</h5>
+            </div>
+            <div class="card-body">
+                {% set regression_algos = ['linear', 'ridge', 'lasso'] %}
+                {% set clustering_algos = ['kmeans', 'gmm'] %}
+
+                <!-- Regression Comparison -->
+                {% if all_results.keys()|select('in', regression_algos)|list %}
+                <h6 class="fw-bold mb-3">Regression Algorithms</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>R² Score</th>
+                                <th>RMSE</th>
+                                <th>MAE</th>
+                                <th>Features Used</th>
+                                {% if all_results.get('lasso') %}
+                                <th>Feature Selection</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for algo in regression_algos %}
+                            {% if all_results.get(algo) %}
+                            {% set result = all_results[algo] %}
+                            <tr>
+                                <td><strong>{{ result.algorithm }}</strong></td>
+                                <td>
+                                    <span
+                                        class="badge {{ 'bg-success' if result.test_metrics.r2 > 0.8 else 'bg-warning' if result.test_metrics.r2 > 0.5 else 'bg-danger' }}">
+                                        {{ "%.4f"|format(result.test_metrics.r2) }}
+                                    </span>
+                                </td>
+                                <td>{{ "%.4f"|format(result.test_metrics.rmse) }}</td>
+                                <td>{{ "%.4f"|format(result.test_metrics.mae) }}</td>
+                                <td>{{ result.feature_names|length }}</td>
+                                {% if algo == 'lasso' %}
+                                <td>
+                                    <span class="badge bg-info">
+                                        {{ result.feature_selection.n_selected }}/{{ result.feature_selection.n_total }}
+                                    </span>
+                                </td>
+                                {% elif all_results.get('lasso') %}
+                                <td>-</td>
+                                {% endif %}
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Clustering Comparison -->
+                {% if all_results.keys()|select('in', clustering_algos)|list %}
+                <h6 class="fw-bold mb-3">Clustering Algorithms</h6>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Clusters</th>
+                                <th>Silhouette Score</th>
+                                <th>Davies-Bouldin Index</th>
+                                {% if all_results.get('gmm') %}
+                                <th>AIC</th>
+                                <th>BIC</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for algo in clustering_algos %}
+                            {% if all_results.get(algo) %}
+                            {% set result = all_results[algo] %}
+                            <tr>
+                                <td><strong>{{ result.algorithm }}</strong></td>
+                                <td>{{ result.n_clusters if algo == 'kmeans' else result.n_components }}</td>
+                                <td>
+                                    <span
+                                        class="badge {{ 'bg-success' if result.metrics.silhouette > 0.5 else 'bg-warning' if result.metrics.silhouette > 0.3 else 'bg-danger' }}">
+                                        {{ "%.4f"|format(result.metrics.silhouette) }}
+                                    </span>
+                                </td>
+                                <td>{{ "%.4f"|format(result.metrics.davies_bouldin) }}</td>
+                                {% if algo == 'gmm' %}
+                                <td>{{ "%.2f"|format(result.metrics.aic) }}</td>
+                                <td>{{ "%.2f"|format(result.metrics.bic) }}</td>
+                                {% elif all_results.get('gmm') %}
+                                <td>-</td>
+                                <td>-</td>
+                                {% endif %}
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Detailed Results for Each Algorithm -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-microscope me-2"></i>Detailed Results by Algorithm</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Algorithm List -->
+                    <div class="col-md-3">
+                        <div class="list-group" id="algorithm-list" role="tablist">
+                            {% for algo_name in all_results.keys() %}
+                            <a class="list-group-item list-group-item-action algorithm-tab {{ 'active' if loop.first }}"
+                                id="tab-{{ algo_name }}" data-bs-toggle="list" href="#content-{{ algo_name }}"
+                                role="tab">
+                                <i
+                                    class="fas fa-{{ 'chart-line' if algo_name == 'linear' else 'mountain' if algo_name == 'ridge' else 'filter' if algo_name == 'lasso' else 'project-diagram' if algo_name == 'kmeans' else 'bezier-curve' }} me-2"></i>
+                                {{ all_results[algo_name].algorithm }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Algorithm Content -->
+                    <div class="col-md-9">
+                        <div class="tab-content" id="algorithm-content">
+                            {% for algo_name, result in all_results.items() %}
+                            <div class="tab-pane fade {{ 'show active' if loop.first }}" id="content-{{ algo_name }}"
+                                role="tabpanel">
+
+                                <h5 class="mb-3">{{ result.algorithm }}</h5>
+
+                                <!-- Regression Details -->
+                                {% if 'test_metrics' in result %}
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <h6>Training Metrics</h6>
+                                        <ul class="list-unstyled">
+                                            <li>R² Score: <strong>{{ "%.4f"|format(result.train_metrics.r2) }}</strong>
+                                            </li>
+                                            <li>RMSE: <strong>{{ "%.4f"|format(result.train_metrics.rmse) }}</strong>
+                                            </li>
+                                            <li>MAE: <strong>{{ "%.4f"|format(result.train_metrics.mae) }}</strong></li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Test Metrics</h6>
+                                        <ul class="list-unstyled">
+                                            <li>R² Score: <strong>{{ "%.4f"|format(result.test_metrics.r2) }}</strong>
+                                            </li>
+                                            <li>RMSE: <strong>{{ "%.4f"|format(result.test_metrics.rmse) }}</strong>
+                                            </li>
+                                            <li>MAE: <strong>{{ "%.4f"|format(result.test_metrics.mae) }}</strong></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <!-- Clustering Details -->
+                                {% if 'metrics' in result and 'silhouette' in result.metrics %}
+                                <div class="mb-3">
+                                    <h6>Clustering Metrics</h6>
+                                    <ul class="list-unstyled">
+                                        <li>Silhouette Score: <strong>{{ "%.4f"|format(result.metrics.silhouette)
+                                                }}</strong></li>
+                                        <li>Davies-Bouldin Index: <strong>{{
+                                                "%.4f"|format(result.metrics.davies_bouldin) }}</strong></li>
+                                        {% if 'aic' in result.metrics %}
+                                        <li>AIC: <strong>{{ "%.2f"|format(result.metrics.aic) }}</strong></li>
+                                        <li>BIC: <strong>{{ "%.2f"|format(result.metrics.bic) }}</strong></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                <!-- Visualizations -->
+                                <h6 class="mt-4 mb-3">Visualizations</h6>
+                                <div class="row g-3">
+                                    {% for viz_name, viz_data in all_viz[algo_name].items() %}
+                                    <div class="col-md-6">
+                                        <img src="{{ viz_data }}" class="img-fluid rounded shadow-sm"
+                                            alt="{{ viz_name }}">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Download Options -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0"><i class="fas fa-download me-2"></i>Download Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('download_results') }}" class="btn btn-primary">
+                        <i class="fas fa-file-download me-2"></i>Download Full Results (JSON)
+                    </a>
+                    <a href="{{ url_for('upload') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Analyze New Dataset
+                    </a>
+                    <a href="{{ url_for('clear_session') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-trash me-2"></i>Clear Session
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 AlgoLab. Built with Python.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,58 @@
+lasso regression : Lasso is a regression technique that adds a penalty to prevent overfitting AND automatically selects important features by eliminating irrelevant ones.
+
+When to Use Lasso:
+✓ You have many features and suspect some are irrelevant
+✓ You want automatic feature selection
+✓ You need a simpler, interpretable model
+✓ You want to know which features matter most
+
+How It Works Step-by-Step:
+Starts with all features
+During training, it shrinks coefficients toward zero
+Some coefficients hit exactly zero and those features are eliminated
+Final model only uses features with non-zero coefficients
+
+
+RIDGE REGRESSION :
+Ridge is a regression technique that prevents overfitting by shrinking coefficients, but it keeps all features in the model.
+
+Key Difference from Lasso:
+Ridge shrinks coefficients smoothly but keeps ALL features
+No automatic feature selection
+All 20 features stay in the model, just with smaller coefficients
+
+
+When to Use Ridge:
+✓ You have multicollinearity (correlated features)
+✓ You want to keep all features in the model
+✓ You don't need feature selection
+✓ You have more features than samples
+
+Special Strength:
+Ridge handles multicollinearity (when features are correlated) better than linear regression. Example: If you have both "house size in sq ft" and "house size in sq meters", they're highly correlated. Ridge handles this smoothly.
+
+
+What is Linear Regression : 
+The simplest form of regression - finds the best straight line through your data points with no penalties or regularization.
+
+When to Use Linear Regression:
+✓ You have simple, clean data
+✓ Features aren't highly correlated
+✓ You have more samples than features
+✓ You want the simplest model
+✓ No overfitting concerns
+
+KEY CONCEPTS TO UNDERSTAND
+1. Overfitting vs Underfitting:
+Overfitting: Model learns training data too well, including noise. Performs poorly on new data.
+Underfitting: Model is too simple, doesn't capture patterns. Performs poorly everywhere.
+Regularization (Ridge/Lasso): Prevents overfitting by constraining coefficients
+
+
+ WHAT YOU MUST REMEMBER
+Lasso = Feature Selection (sets coefficients to 0)
+Ridge = Keep Everything (shrinks but doesn't eliminate)
+Linear = No Regularization (simplest but can overfit)
+Always scale your features before using Ridge or Lasso
+Use cross-validation to find optimal alpha
+Larger alpha = stronger regularization = simpler model

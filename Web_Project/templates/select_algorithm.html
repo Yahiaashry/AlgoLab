@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Algorithm - AlgoLab</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-brain"></i> AlgoLab
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('compare') }}">Compare</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">About</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <!-- Data Preview -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Data Preview</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Shape:</strong> {{ data_info.n_rows }} rows × {{ data_info.n_cols }} columns</p>
+                <p><strong>Numeric Columns:</strong> {{ data_info.numeric_columns | join(', ') }}</p>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                {% for col in preview.columns %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in preview.head[:5] %}
+                            <tr>
+                                {% for col in preview.columns %}
+                                <td>{{ row[col] }}</td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Select Algorithm -->
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-cogs me-2"></i>Select Algorithm and Parameters</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('train_model') }}" id="algorithmForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Algorithm Type</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card algorithm-selection">
+                                    <input type="radio" class="btn-check" name="algorithm" id="linear" value="linear"
+                                        required>
+                                    <label class="card-body text-center" for="linear">
+                                        <i class="fas fa-chart-line fa-2x text-primary mb-2"></i>
+                                        <h6>Linear Regression</h6>
+                                        <small class="text-muted">Basic regression model</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card algorithm-selection">
+                                    <input type="radio" class="btn-check" name="algorithm" id="ridge" value="ridge"
+                                        required>
+                                    <label class="card-body text-center" for="ridge">
+                                        <i class="fas fa-mountain fa-2x text-success mb-2"></i>
+                                        <h6>Ridge Regression</h6>
+                                        <small class="text-muted">L2 regularization</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card algorithm-selection">
+                                    <input type="radio" class="btn-check" name="algorithm" id="lasso" value="lasso"
+                                        required>
+                                    <label class="card-body text-center" for="lasso">
+                                        <i class="fas fa-filter fa-2x text-warning mb-2"></i>
+                                        <h6>Lasso Regression</h6>
+                                        <small class="text-muted">Feature selection</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card algorithm-selection">
+                                    <input type="radio" class="btn-check" name="algorithm" id="kmeans" value="kmeans"
+                                        required>
+                                    <label class="card-body text-center" for="kmeans">
+                                        <i class="fas fa-project-diagram fa-2x text-danger mb-2"></i>
+                                        <h6>K-Means Clustering</h6>
+                                        <small class="text-muted">Partition clustering</small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card algorithm-selection">
+                                    <input type="radio" class="btn-check" name="algorithm" id="gmm" value="gmm"
+                                        required>
+                                    <label class="card-body text-center" for="gmm">
+                                        <i class="fas fa-bezier-curve fa-2x text-info mb-2"></i>
+                                        <h6>Gaussian Mixture Model</h6>
+                                        <small class="text-muted">Soft clustering</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regression Parameters -->
+                    <div id="regressionParams" class="params-section d-none">
+                        <h6 class="fw-bold mb-3">Regression Parameters</h6>
+                        <div class="mb-3">
+                            <label for="targetColumn" class="form-label">Target Column</label>
+                            <select class="form-select" id="targetColumn" name="target_column">
+                                {% for col in data_info.numeric_columns %}
+                                <option value="{{ col }}">{{ col }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="featureColumns" class="form-label">Feature Columns (optional, leave empty for
+                                all)</label>
+                            <select class="form-select" id="featureColumns" name="feature_columns" multiple size="5">
+                                {% for col in data_info.numeric_columns %}
+                                <option value="{{ col }}">{{ col }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                        <div id="alphaParam" class="d-none">
+                            <div class="mb-3">
+                                <label for="alpha" class="form-label">Alpha (Regularization Strength)</label>
+                                <input type="number" class="form-control" id="alpha" name="alpha" value="1.0"
+                                    step="0.01" min="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clustering Parameters -->
+                    <div id="clusteringParams" class="params-section d-none">
+                        <h6 class="fw-bold mb-3">Clustering Parameters</h6>
+                        <div class="mb-3">
+                            <label for="clusterFeatures" class="form-label">Feature Columns</label>
+                            <select class="form-select" id="clusterFeatures" name="cluster_features" multiple size="5">
+                                {% for col in data_info.numeric_columns %}
+                                <option value="{{ col }}">{{ col }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple (leave empty for all)</small>
+                        </div>
+                        <div id="kmeansParam" class="d-none">
+                            <div class="mb-3">
+                                <label for="nClusters" class="form-label">Number of Clusters</label>
+                                <input type="number" class="form-control" id="nClusters" name="n_clusters" value="3"
+                                    min="2" max="10">
+                            </div>
+                        </div>
+                        <div id="gmmParam" class="d-none">
+                            <div class="mb-3">
+                                <label for="nComponents" class="form-label">Number of Components</label>
+                                <input type="number" class="form-control" id="nComponents" name="n_components" value="3"
+                                    min="2" max="10">
+                            </div>
+                            <div class="mb-3">
+                                <label for="covType" class="form-label">Covariance Type</label>
+                                <select class="form-select" id="covType" name="covariance_type">
+                                    <option value="full">Full</option>
+                                    <option value="tied">Tied</option>
+                                    <option value="diag">Diagonal</option>
+                                    <option value="spherical">Spherical</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play me-2"></i>Train Model
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 AlgoLab. Built with Python..</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Show/hide parameter sections based on algorithm selection
+        document.querySelectorAll('input[name="algorithm"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                const algo = this.value;
+
+                // Hide all params
+                document.getElementById('regressionParams').classList.add('d-none');
+                document.getElementById('clusteringParams').classList.add('d-none');
+                document.getElementById('alphaParam').classList.add('d-none');
+                document.getElementById('kmeansParam').classList.add('d-none');
+                document.getElementById('gmmParam').classList.add('d-none');
+
+                // Show relevant params
+                if (['linear', 'ridge', 'lasso'].includes(algo)) {
+                    document.getElementById('regressionParams').classList.remove('d-none');
+                    if (algo === 'ridge' || algo === 'lasso') {
+                        document.getElementById('alphaParam').classList.remove('d-none');
+                    }
+                } else if (['kmeans', 'gmm'].includes(algo)) {
+                    document.getElementById('clusteringParams').classList.remove('d-none');
+                    if (algo === 'kmeans') {
+                        document.getElementById('kmeansParam').classList.remove('d-none');
+                    } else {
+                        document.getElementById('gmmParam').classList.remove('d-none');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
